@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 import asyncio
 from simple_auth import SimpleAuth
+import os
 
 # Add src directory to path for imports
 sys.path.append(str(Path(__file__).parent / "src"))
@@ -214,53 +215,8 @@ if st.session_state.live_processing_query and st.session_state.live_pending_ques
             if hasattr(st.session_state.live_chatbot.query_system, '_last_query_results'):
                 query_results = st.session_state.live_chatbot.query_system._last_query_results
             
-            # Handle graph visualization
-            try:
-                from src.graph_visualizer import GraphVisualizer
-                visualizer = GraphVisualizer()
-                
-                # Check if user requested a graph - enhanced detection
-                user_question = st.session_state.live_pending_question.lower()
-                graph_keywords = [
-                    'graph', 'chart', 'plot', 'visualize', 'visualization',
-                    'bar graph', 'pie chart', 'histogram', 'bar chart'
-                ]
-                
-                if any(keyword in user_question for keyword in graph_keywords) and query_results:
-                    # Determine chart type and datacenter filter
-                    datacenter = None
-                    for dc in ['dc4', 'gb00', 'ch00', 'sg00']:
-                        if dc in user_question:
-                            datacenter = dc.upper()
-                            break
-                    
-                    # Enhanced chart type detection with defaults
-                    chart_type = 'bar'  # Default for 'graph', 'chart', 'histogram'
-                    
-                    if any(keyword in user_question for keyword in ['pie', 'pie chart', 'donut']):
-                        chart_type = 'pie'
-                    elif any(keyword in user_question for keyword in ['horizontal', 'horizontal bar']):
-                        chart_type = 'horizontal_bar'
-                    elif any(keyword in user_question for keyword in ['heatmap', 'heat map']):
-                        graph_fig = visualizer.create_database_status_heatmap(query_results)
-                    elif any(keyword in user_question for keyword in ['comparison', 'compare']):
-                        graph_fig = visualizer.create_datacenter_comparison_graph(query_results)
-                    elif any(keyword in user_question for keyword in ['resource', 'ram', 'cpu']):
-                        graph_fig = visualizer.create_resource_utilization_chart(query_results)
-                    else:
-                        # Default case: create server count graph with detected type
-                        graph_fig = visualizer.create_server_count_graph(query_results, datacenter, chart_type)
-                    
-                    # Handle remaining cases for specific chart types
-                    if graph_fig is None:
-                        graph_fig = visualizer.create_server_count_graph(query_results, datacenter, chart_type)
-                        
-                    if graph_fig:
-                        response += "\n\n ***Interactive visualization generated below:***"
-            except ImportError:
-                pass  # Graph visualization not available
-            except Exception as e:
-                print(f"[DEBUG] Graph generation failed: {e}")
+            # Graph visualization disabled for Streamlit Cloud deployment
+            # Users can still request visual data in table format
             
             # Handle Excel export for results with > 2 rows (in-memory)
             excel_component_id = None

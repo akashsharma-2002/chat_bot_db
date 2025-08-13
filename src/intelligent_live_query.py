@@ -24,12 +24,13 @@ from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 from openai import OpenAI
-from dotenv import load_dotenv
 import pandas as pd
 import concurrent.futures
 from threading import Lock
-
-load_dotenv()
+try:
+    from env_helper import get_env_var, load_database_config
+except ImportError:
+    from .env_helper import get_env_var, load_database_config
 
 # Import graph visualization module
 try:
@@ -86,22 +87,22 @@ class IntelligentLiveQuerySystem:
         ]
         
         for dc_config in datacenter_configs:
-            host_address = os.getenv(dc_config["host_key"])
+            host_address = get_env_var(dc_config["host_key"])
             if host_address:
                 servers.append({
                     'name': dc_config["name"],
                     'aliases': dc_config["aliases"],
                     'host': host_address,
-                    'port': int(os.getenv("HEALTH_CHECK_PORT", "5432")),
-                    'database': os.getenv("HEALTH_CHECK_DB", "inventory"),
-                    'username': os.getenv("HEALTH_CHECK_USER", "app_user_pg"),
-                    'password': os.getenv("HEALTH_CHECK_PASSWORD", "Str0ngPg#2025")
+                    'port': int(get_env_var("HEALTH_CHECK_PORT", "5432")),
+                    'database': get_env_var("HEALTH_CHECK_DB", "inventory"),
+                    'username': get_env_var("HEALTH_CHECK_USER", "app_user_pg"),
+                    'password': get_env_var("HEALTH_CHECK_PASSWORD", "Str0ngPg#2025")
                 })
         return servers
     
     def _init_llm_client(self) -> OpenAI:
         """Initialize LLM client"""
-        github_token = os.getenv("GITHUB_TOKEN")
+        github_token = get_env_var("GITHUB_TOKEN")
         if not github_token:
             raise ValueError("GITHUB_TOKEN environment variable is not set. Please set it with a valid GitHub token.")
         
