@@ -396,16 +396,32 @@ Return only the JSON array, no other text.
             
             print(f"[DEBUG Query] SQL: {modified_sql[:100]}...")
             
-            # Connect and execute
+            # Connect and execute with enhanced connection parameters
             print(f"[DEBUG Query] Connecting to {server['host']}:{server['port']} as {server['username']}")
-            conn = psycopg2.connect(
-                host=server['host'],
-                port=server['port'],
-                dbname=server['database'],
-                user=server['username'],
-                password=server['password'],
-                connect_timeout=15
-            )
+            
+            # Enhanced connection parameters for cloud deployment
+            conn_params = {
+                'host': server['host'],
+                'port': server['port'],
+                'dbname': server['database'],
+                'user': server['username'],
+                'password': server['password'],
+                'connect_timeout': 30,  # Increased timeout for cloud connections
+                'sslmode': 'prefer',    # Try SSL first, fallback to non-SSL
+                'application_name': 'smart_dba_bot',
+                'options': '-c statement_timeout=30000'  # 30 second query timeout
+            }
+            
+            try:
+                conn = psycopg2.connect(**conn_params)
+            except psycopg2.OperationalError as e:
+                # If SSL connection fails, try without SSL
+                if 'SSL' in str(e) or 'ssl' in str(e).lower():
+                    print(f"[DEBUG Query] SSL connection failed, retrying without SSL: {e}")
+                    conn_params['sslmode'] = 'disable'
+                    conn = psycopg2.connect(**conn_params)
+                else:
+                    raise
             
             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                 cursor.execute(modified_sql)

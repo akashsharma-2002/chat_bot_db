@@ -12,6 +12,14 @@ class SimpleAuth:
         self.config_file = config_file
         self.config = self._load_config()
         
+    def _get_from_secrets_or_config(self, key, default=None):
+        """Try to get value from Streamlit secrets first, then config, then default"""
+        try:
+            import streamlit as st
+            return st.secrets.get(key, default)
+        except:
+            return default
+        
     def _load_config(self):
         """Load configuration from YAML file."""
         try:
@@ -39,7 +47,21 @@ class SimpleAuth:
     
     def authenticate_user(self, username, password):
         """Authenticate user with username and password."""
+        # Try Streamlit secrets first (for cloud deployment)
+        try:
+            admin_user = self._get_from_secrets_or_config('admin_user')
+            admin_password = self._get_from_secrets_or_config('admin_password')
+            
+            if admin_user and admin_password:
+                if username == admin_user and password == admin_password:
+                    print(f"Debug - Authenticated via Streamlit secrets: {username}")
+                    return True
+        except Exception as e:
+            print(f"Debug - Streamlit secrets auth failed: {e}")
+        
+        # Fallback to config file authentication
         if not self.config:
+            print("Debug - No config available and secrets auth failed")
             return False
             
         users = self.config.get('credentials', {}).get('usernames', {})
