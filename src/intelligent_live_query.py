@@ -24,25 +24,12 @@ from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 from openai import OpenAI
+from dotenv import load_dotenv
 import pandas as pd
 import concurrent.futures
 from threading import Lock
 
-# Handle environment variables for both local and cloud deployment
-try:
-    import streamlit as st
-    # Try to get from Streamlit secrets first (for cloud deployment)
-    def get_env_var(key, default=None):
-        try:
-            return st.secrets[key]
-        except:
-            return os.getenv(key, default)
-except ImportError:
-    # Fallback for non-Streamlit environments
-    from dotenv import load_dotenv
-    load_dotenv()
-    def get_env_var(key, default=None):
-        return os.getenv(key, default)
+load_dotenv()
 
 # Import graph visualization module
 try:
@@ -99,22 +86,22 @@ class IntelligentLiveQuerySystem:
         ]
         
         for dc_config in datacenter_configs:
-            host_address = get_env_var(dc_config["host_key"])
+            host_address = os.getenv(dc_config["host_key"])
             if host_address:
                 servers.append({
                     'name': dc_config["name"],
                     'aliases': dc_config["aliases"],
                     'host': host_address,
-                    'port': int(get_env_var("HEALTH_CHECK_PORT", "5432")),
-                    'database': get_env_var("HEALTH_CHECK_DB", "inventory"),
-                    'username': get_env_var("HEALTH_CHECK_USER", "app_user_pg"),
-                    'password': get_env_var("HEALTH_CHECK_PASSWORD", "Str0ngPg#2025")
+                    'port': int(os.getenv("HEALTH_CHECK_PORT", "5432")),
+                    'database': os.getenv("HEALTH_CHECK_DB", "inventory"),
+                    'username': os.getenv("HEALTH_CHECK_USER", "app_user_pg"),
+                    'password': os.getenv("HEALTH_CHECK_PASSWORD", "Str0ngPg#2025")
                 })
         return servers
     
     def _init_llm_client(self) -> OpenAI:
         """Initialize LLM client"""
-        github_token = get_env_var("GITHUB_TOKEN")
+        github_token = os.getenv("GITHUB_TOKEN")
         if not github_token:
             raise ValueError("GITHUB_TOKEN environment variable is not set. Please set it with a valid GitHub token.")
         
@@ -396,32 +383,16 @@ Return only the JSON array, no other text.
             
             print(f"[DEBUG Query] SQL: {modified_sql[:100]}...")
             
-            # Connect and execute with enhanced connection parameters
+            # Connect and execute
             print(f"[DEBUG Query] Connecting to {server['host']}:{server['port']} as {server['username']}")
-            
-            # Enhanced connection parameters for cloud deployment
-            conn_params = {
-                'host': server['host'],
-                'port': server['port'],
-                'dbname': server['database'],
-                'user': server['username'],
-                'password': server['password'],
-                'connect_timeout': 30,  # Increased timeout for cloud connections
-                'sslmode': 'prefer',    # Try SSL first, fallback to non-SSL
-                'application_name': 'smart_dba_bot',
-                'options': '-c statement_timeout=30000'  # 30 second query timeout
-            }
-            
-            try:
-                conn = psycopg2.connect(**conn_params)
-            except psycopg2.OperationalError as e:
-                # If SSL connection fails, try without SSL
-                if 'SSL' in str(e) or 'ssl' in str(e).lower():
-                    print(f"[DEBUG Query] SSL connection failed, retrying without SSL: {e}")
-                    conn_params['sslmode'] = 'disable'
-                    conn = psycopg2.connect(**conn_params)
-                else:
-                    raise
+            conn = psycopg2.connect(
+                host=server['host'],
+                port=server['port'],
+                dbname=server['database'],
+                user=server['username'],
+                password=server['password'],
+                connect_timeout=15
+            )
             
             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                 cursor.execute(modified_sql)
