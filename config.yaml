@@ -1,0 +1,15 @@
+credentials:
+  usernames:
+    dba_admin:
+      email: dba@bot.com
+      name: DBA Administrator
+      password: botdba321  # Plain text password for simple matching
+
+cookie:
+  expiry_days: 30
+  key: dba_secure_random_key_xyz789_2025_bot_auth
+  name: dba_bot_session_cookie
+
+preauthorized:
+  emails:
+  - dba@bot.com
