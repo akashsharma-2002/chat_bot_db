@@ -388,7 +388,7 @@ Return only the JSON array, no other text.
             conn = psycopg2.connect(
                 host=server['host'],
                 port=server['port'],
-                database=server['database'],
+                dbname=server['database'],
                 user=server['username'],
                 password=server['password'],
                 connect_timeout=15
@@ -399,7 +399,7 @@ Return only the JSON array, no other text.
                 rows = cursor.fetchall()
                 
                 # Convert to DataFrame
-                df = pd.DataFrame([dict(row) for row in rows]) if rows else pd.DataFrame()
+                df = pd.DataFrame(rows) if rows else pd.DataFrame()
                 
                 execution_time = (datetime.now() - start_time).total_seconds()
                 
